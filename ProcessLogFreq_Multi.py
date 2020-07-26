@@ -21,6 +21,7 @@ def bfcalc(rcCommand, rcRate=1., expo=0., superRate=0.7):
 
 
 def processLog(fname, rows_taken):
+    start_from = 4000
     motor_vals = []
     rc_commands = []
     gyro = []
@@ -46,19 +47,20 @@ def processLog(fname, rows_taken):
                             m_cidx = i
                     continue
             else:
-                t.append(float(row[t_cidx]))
-                rc_commands.append([bfcalc(float(row[rc_cidx])/500),bfcalc(float(row[rc_cidx+1])/500),bfcalc(float(row[rc_cidx+2])/500),bfcalc(float(row[rc_cidx+3])/500)])
-                # rc_commands.append([float(row[rc_cidx]),float(row[rc_cidx+1]),float(row[rc_cidx+2]),float(row[rc_cidx+3])])
-                gyro.append([float(row[g_cidx]), float(row[g_cidx+1]), float(row[g_cidx+2])])
-                motor_vals.append([float(row[m_cidx]), float(row[m_cidx+1]), float(row[m_cidx+2]), float(row[m_cidx+3])])
+                if count > 4000:
+                    t.append(float(row[t_cidx]))
+                    rc_commands.append([bfcalc(float(row[rc_cidx])/500),bfcalc(float(row[rc_cidx+1])/500),bfcalc(float(row[rc_cidx+2])/500),bfcalc(float(row[rc_cidx+3])/500)])
+                    # rc_commands.append([float(row[rc_cidx]),float(row[rc_cidx+1]),float(row[rc_cidx+2]),float(row[rc_cidx+3])])
+                    gyro.append([float(row[g_cidx]), float(row[g_cidx+1]), float(row[g_cidx+2])])
+                    motor_vals.append([float(row[m_cidx]), float(row[m_cidx+1]), float(row[m_cidx+2]), float(row[m_cidx+3])])
                 if count > rows_taken:
                     break
                 count+=1
-
+    print(fname, count)
     t = np.array(t)/1e6
     avg_t_diff = 0.00137
 
-    motor_vals = 2*np.array(motor_vals)/1000 - 1.
+    motor_vals = 2*np.array(motor_vals)/1600 - 1.
     amplitudess = []
     smoothnesses = []
     for i in range(motor_vals.shape[1]):
@@ -79,14 +81,14 @@ def folder_to_array_dict(folder, rows_taken):
     return utils.dict_elems_apply(np.array, utils.dicts_list_to_list_dicts(logs))
 
 
-def plot_avg_fourier(f, ax, label, vals):
+def plot_avg_fourier(f, ax, vals):
     utils.plot_fourier( ax
                       , freqs          = vals['freqs'][0]
                       , amplitudes     = vals['amplitudess'].mean(axis=(0,1))
                       , amplitudes_std = vals['amplitudess'].std(axis=(0,1)))
     ax.set_ylim([0,0.08])
     ax.set_xlabel('Frequency (Hz)')
-    ax.set_title(f"{label}, smoothness: {np.mean(vals['smoothnesses'])*10**3:.2f}$\\pm${np.std(vals['smoothnesses'])*10**3:.2f}")
+    ax.set_title(f"Smoothness: {np.mean(vals['smoothnesses'])*10**3:.2f}$\\pm${np.std(vals['smoothnesses'])*10**3:.2f}")
 
     rc_commands = vals['rc_commands'][:,:,:3]
 
@@ -94,16 +96,28 @@ def plot_avg_fourier(f, ax, label, vals):
     print("RMSE:", np.sqrt(np.average((rc_commands - vals['gyro'])**2)))
 
 
+def plot_motors(f, ax, label, vals):
+    percentage_motors = 100*(vals["motor_vals"]/2+0.5)
+    first_flight_motors = percentage_motors[0]
+    t = vals["t"][0]
+    for i in range(first_flight_motors.shape[1]):
+        ax.plot(t, first_flight_motors[:,i])
+    ax.set_title(label)
+
+
 
 if __name__ == "__main__":
     labels = [ "Neuroflight", "PID", "PPO+CAPS" ]
-    f, ax = plt.subplots(1,len(labels),figsize=(5,2), sharey=True, sharex=False)
+    f, ax = plt.subplots(2,len(labels),figsize=(5,2), sharey=False, sharex=False)
     
     for i, label in enumerate(labels):
         fdir = "./data/reality/" + label
-        vals = folder_to_array_dict(fdir, rows_taken=6000)
-        plot_avg_fourier(f, ax[i], label, vals)
+        vals = folder_to_array_dict(fdir, rows_taken=10000)
+        plot_motors(f, ax[0,i], label, vals)
+        plot_avg_fourier(f, ax[1,i], vals)
 
-    ax[0].set_ylabel('Normalized Amplitude')
+    ax[0,0].set_ylabel('Motor usage %')
+    ax[1,0].set_ylabel('Normalized Amplitude')
+    f.align_ylabels()
 
     plt.show()

@@ -1,5 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
+import utils
 
 def plot_motor(desired_rpy, rpy, motor_ouptuts):
     f, ax = plt.subplots(1,1, sharex=True, sharey=False)
@@ -57,7 +58,8 @@ def plot_following(desired_rpy, rpy, motor_ouptuts):
 
     plt.setp([a.get_xticklabels() for a in f.axes[:-1]], visible=False)
     t = np.array(range(len(desired_rpy[:,0]))) * 0.001
-    colors = ['#e41a1c', '#265285', '#4daf4a', '#984ea3', '#6e0178', '#ff7f00']
+    # colors = ['#e41a1c', '#265285', '#4daf4a', '#984ea3', '#6e0178', '#ff7f00']
+    colors = list(utils.theme.values())
 
     def plot_desired_vs_actual(i,label):
         desired = ax[i][0].plot(t, desired_rpy[:,i],"r--", label="desired", linewidth=2, alpha=1, color=colors[0])
