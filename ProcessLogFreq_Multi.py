@@ -69,12 +69,32 @@ def processLog(fname, fft_len=40000):
 
     return {'motor_vals':motor_vals, 'rc_commands':rc_commands, 'gyro':gyro, 't':t, 'amplitudess': amplitudess, 'freqs': freqs, 'smoothnesses': smoothnesses}
 
-def plot_fourier(freqs, amplitudes, amplitudes_std):
-    fill = amplitudes + amplitudes_std
-    plt.plot(freqs, amplitudes, color='#003c69')
-    plt.plot(freqs, fill, color='#003c69', alpha=0.7)
-    plt.fill_between(freqs, 0, amplitudes, where=amplitudes >= 0, facecolor='#003c69')
-    plt.fill_between(freqs, amplitudes, fill, facecolor='#003c69', alpha=0.6)
+def folder_to_array_dict(folder):
+    for file in os.listdir(fdir):
+        if file.endswith('.csv'):
+            fname = os.path.join(fdir, file)
+            logs.append(processLog(fname, fft_l))
+
+    return utils.dict_elems_apply(np.array, utils.dicts_list_to_list_dicts(logs))
+
+
+def plot_avg_fourier(f, ax, label, vals):
+    utils.plot_fourier( f, ax
+                      , freqs          = vals['freqs'][0]
+                      , amplitudes     = vals['amplitudess'].mean(axis=(0,1))
+                      , amplitudes_std = vals['amplitudess'].std(axis=(0,1)))
+    plt.ylim([0,0.1])
+    plt.ylabel('Normalized Amplitude')
+    plt.xlabel('Frequency (Hz)')
+    plt.title(f"{label}, smoothness: {np.mean(vals['smoothnesses'])*10**3:.2f}$\\pm${np.std(vals['smoothnesses'])*10**3:.2f}")
+    plt.tight_layout()
+
+    rc_commands = vals['rc_commands'][:,:,:3]
+
+    print("MAE:", np.average(np.abs(rc_commands - vals['gyro'])))
+    print("RMSE:", np.sqrt(np.average((rc_commands - vals['gyro'])**2)))
+
+
 
 if __name__ == "__main__":
     fft_l = 6000
@@ -83,32 +103,11 @@ if __name__ == "__main__":
     # label = "PID"
     label = "PPO+CAPS"
     fdir = './data/reality/' + label
+    vals = folder_to_array_dict(fdir)
 
-    for file in os.listdir(fdir):
-        if file.endswith('.csv'):
-            fname = os.path.join(fdir, file)
-            logs.append(processLog(fname, fft_l))
-
-    vals = utils.dict_elems_apply(np.array, utils.dicts_list_to_list_dicts(logs))
     print(utils.dict_elems_apply(np.shape, vals))
 
-    """ MOTOR PLOTS """
-    f, ax = utils.plot_fourier( freqs          = vals['freqs'][0]
-                              , amplitudes     = vals['amplitudess'].mean(axis=(0,1))
-                              , amplitudes_std = vals['amplitudess'].std(axis=(0,1)))
-    plt.ylim([0,0.1])
-    plt.ylabel('Normalized Amplitude')
-    plt.xlabel('Frequency (Hz)')
-    plt.title('Fourier transform of motor signals for ' + label)
-    plt.tight_layout()
+    f, ax = plt.subplots(1,1,figsize=(7,5), sharey=True, sharex=True)
 
-
-    print("smoothness:", np.mean(vals['smoothnesses']))
-    print("smoothness_std:", np.std(vals['smoothnesses']))
-
-    rc_commands = vals['rc_commands'][:,:,:3]
-
-    print("MAE:", np.average(np.abs(rc_commands - vals['gyro'])))
-    print("RMSE:", np.sqrt(np.average((rc_commands - vals['gyro'])**2)))
-
+    plot_avg_fourier(f, ax, label, vals)
     plt.show()
