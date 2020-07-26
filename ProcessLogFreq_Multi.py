@@ -20,7 +20,7 @@ def bfcalc(rcCommand, rcRate=1., expo=0., superRate=0.7):
     return angleRate
 
 
-def processLog(fname, fft_len=40000):
+def processLog(fname, rows_taken):
     motor_vals = []
     rc_commands = []
     gyro = []
@@ -51,7 +51,7 @@ def processLog(fname, fft_len=40000):
                 # rc_commands.append([float(row[rc_cidx]),float(row[rc_cidx+1]),float(row[rc_cidx+2]),float(row[rc_cidx+3])])
                 gyro.append([float(row[g_cidx]), float(row[g_cidx+1]), float(row[g_cidx+2])])
                 motor_vals.append([float(row[m_cidx]), float(row[m_cidx+1]), float(row[m_cidx+2]), float(row[m_cidx+3])])
-                if count > fft_len:
+                if count > rows_taken:
                     break
                 count+=1
 
@@ -69,26 +69,24 @@ def processLog(fname, fft_len=40000):
 
     return {'motor_vals':motor_vals, 'rc_commands':rc_commands, 'gyro':gyro, 't':t, 'amplitudess': amplitudess, 'freqs': freqs, 'smoothnesses': smoothnesses}
 
-def folder_to_array_dict(folder):
+def folder_to_array_dict(folder, rows_taken):
     logs = []
-    for file in os.listdir(fdir):
+    for file in os.listdir(folder):
         if file.endswith('.csv'):
-            fname = os.path.join(fdir, file)
-            logs.append(processLog(fname, fft_l))
+            fname = os.path.join(folder, file)
+            logs.append(processLog(fname, rows_taken))
 
     return utils.dict_elems_apply(np.array, utils.dicts_list_to_list_dicts(logs))
 
 
 def plot_avg_fourier(f, ax, label, vals):
-    utils.plot_fourier( f, ax
+    utils.plot_fourier( ax
                       , freqs          = vals['freqs'][0]
                       , amplitudes     = vals['amplitudess'].mean(axis=(0,1))
                       , amplitudes_std = vals['amplitudess'].std(axis=(0,1)))
-    plt.ylim([0,0.1])
-    plt.ylabel('Normalized Amplitude')
-    plt.xlabel('Frequency (Hz)')
-    plt.title(f"{label}, smoothness: {np.mean(vals['smoothnesses'])*10**3:.2f}$\\pm${np.std(vals['smoothnesses'])*10**3:.2f}")
-    plt.tight_layout()
+    ax.set_ylim([0,0.08])
+    ax.set_xlabel('Frequency (Hz)')
+    ax.set_title(f"{label}, smoothness: {np.mean(vals['smoothnesses'])*10**3:.2f}$\\pm${np.std(vals['smoothnesses'])*10**3:.2f}")
 
     rc_commands = vals['rc_commands'][:,:,:3]
 
@@ -98,16 +96,14 @@ def plot_avg_fourier(f, ax, label, vals):
 
 
 if __name__ == "__main__":
-    fft_l = 6000
-    # label = "Neuroflight"
-    # label = "PID"
-    label = "PPO+CAPS"
-    fdir = './data/reality/' + label
-    vals = folder_to_array_dict(fdir)
+    labels = [ "Neuroflight", "PID", "PPO+CAPS" ]
+    f, ax = plt.subplots(1,len(labels),figsize=(5,2), sharey=True, sharex=False)
+    
+    for i, label in enumerate(labels):
+        fdir = "./data/reality/" + label
+        vals = folder_to_array_dict(fdir, rows_taken=6000)
+        plot_avg_fourier(f, ax[i], label, vals)
 
-    print(utils.dict_elems_apply(np.shape, vals))
+    ax[0].set_ylabel('Normalized Amplitude')
 
-    f, ax = plt.subplots(1,1,figsize=(7,5), sharey=True, sharex=True)
-
-    plot_avg_fourier(f, ax, label, vals)
     plt.show()

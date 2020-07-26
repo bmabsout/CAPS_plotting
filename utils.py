@@ -40,11 +40,11 @@ def from_actions(actionss, ep_lens):
     fouriers = list(map(fourier_transform, cut_data(actionss, ep_lens)))
     return combine(fouriers)
 
-def plot_fourier(f_m, ax_m, freqs, amplitudes, amplitudes_std=None):
+def plot_fourier(ax_m, freqs, amplitudes, amplitudes_std=None):
     if not (amplitudes_std is None):
         y = amplitudes + amplitudes_std
-        plt.fill_between(freqs, 0, y, where=y >= 0, facecolor='red', alpha=0.6)
-    plt.fill_between(freqs, 0, amplitudes, where=amplitudes >= 0, facecolor='#003c69')
+        ax_m.fill_between(freqs, 0, y, where=y >= 0, facecolor='red', alpha=0.6)
+    ax_m.fill_between(freqs, 0, amplitudes, where=amplitudes >= 0, facecolor='#003c69')
 
 def dict_elems_apply(fn, d):
 	return {k: fn(d[k]) for k in d.keys()}
