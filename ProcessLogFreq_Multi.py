@@ -79,9 +79,11 @@ def plot_fourier(freqs, amplitudes, amplitudes_std):
 if __name__ == "__main__":
     fft_l = 6000
     logs = []
-    # fdir = './data/reality/conditioned'
-    # fdir = './data/reality/pid_flights'
-    fdir = './data/reality/WilFlightlogs'
+    # label = "Neuroflight"
+    # label = "PID"
+    label = "PPO+CAPS"
+    fdir = './data/reality/' + label
+
     for file in os.listdir(fdir):
         if file.endswith('.csv'):
             fname = os.path.join(fdir, file)
@@ -97,14 +99,12 @@ if __name__ == "__main__":
     plt.ylim([0,0.1])
     plt.ylabel('Normalized Amplitude')
     plt.xlabel('Frequency (Hz)')
-    plt.title('Fourier transform of motor signals for PID')
+    plt.title('Fourier transform of motor signals for ' + label)
     plt.tight_layout()
 
 
     print("smoothness:", np.mean(vals['smoothnesses']))
     print("smoothness_std:", np.std(vals['smoothnesses']))
-
-    # f_ma, ax_ma = plt.subplots(1,1) #, figsize=(7,5))
 
     rc_commands = vals['rc_commands'][:,:,:3]
 
