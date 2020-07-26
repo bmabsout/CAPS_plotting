@@ -70,6 +70,7 @@ def processLog(fname, fft_len=40000):
     return {'motor_vals':motor_vals, 'rc_commands':rc_commands, 'gyro':gyro, 't':t, 'amplitudess': amplitudess, 'freqs': freqs, 'smoothnesses': smoothnesses}
 
 def folder_to_array_dict(folder):
+    logs = []
     for file in os.listdir(fdir):
         if file.endswith('.csv'):
             fname = os.path.join(fdir, file)
@@ -98,7 +99,6 @@ def plot_avg_fourier(f, ax, label, vals):
 
 if __name__ == "__main__":
     fft_l = 6000
-    logs = []
     # label = "Neuroflight"
     # label = "PID"
     label = "PPO+CAPS"
