@@ -13,6 +13,8 @@ theme = { 'blue'  : '#265285'
         }
 
 colors = list(theme.values())
+line_styles = ['-' , '--' , '-.' , ':']
+
 
 def fourier_transform(actions, T):
     N = len(actions)
