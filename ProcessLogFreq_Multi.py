@@ -146,6 +146,8 @@ def neuroflight_motors_plot():
     plot_motors(f, ax, None, vals)
     # ax.set_ylim([20, 60])
     ax.set_xticks([])
+    ax.set_ylabel('Motor usage %')
+
     ax.set_xlabel('')
     plt.show()
 
