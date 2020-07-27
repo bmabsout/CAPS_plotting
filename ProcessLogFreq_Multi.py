@@ -21,7 +21,7 @@ def bfcalc(rcCommand, rcRate=1., expo=0., superRate=0.7):
 
 
 def processLog(fname, rows_taken):
-    start_from = 4000
+    start_from = 5000
     motor_vals = []
     rc_commands = []
     gyro = []
@@ -86,9 +86,9 @@ def plot_avg_fourier(f, ax, vals):
                       , freqs          = vals['freqs'][0]
                       , amplitudes     = vals['amplitudess'].mean(axis=(0,1))
                       , amplitudes_std = vals['amplitudess'].std(axis=(0,1)))
-    ax.set_ylim([0,0.08])
+    ax.set_ylim([0,0.07])
     ax.set_xlabel('Frequency (Hz)')
-    ax.set_title(f"Smoothness: {np.mean(vals['smoothnesses'])*10**3:.2f}$\\pm${np.std(vals['smoothnesses'])*10**3:.2f}")
+    # ax.set_title(f"Smoothness: {np.mean(vals['smoothnesses'])*10**3:.2f}$\\pm${np.std(vals['smoothnesses'])*10**3:.2f}")
 
     rc_commands = vals['rc_commands'][:,:,:3]
 
@@ -100,24 +100,31 @@ def plot_motors(f, ax, label, vals):
     percentage_motors = 100*(vals["motor_vals"]/2+0.5)
     first_flight_motors = percentage_motors[0]
     t = vals["t"][0]
+    t -= t[0]
     for i in range(first_flight_motors.shape[1]):
-        ax.plot(t, first_flight_motors[:,i])
+        ax.plot(t, first_flight_motors[:,i], label=f"Motor {i}", color=utils.colors[i], alpha=0.8)
     ax.set_title(label)
+    ax.set_xlim([0,1.0])
+    # ax.set_xticklabels([])
+    ax.set_xlabel('Time (s)')
 
 
 
 if __name__ == "__main__":
-    labels = [ "Neuroflight", "PID", "PPO+CAPS" ]
-    f, ax = plt.subplots(2,len(labels),figsize=(5,2), sharey=False, sharex=False)
+    labels = [ "PID","Neuroflight", "PPO+CAPS" ]
+    f, ax = plt.subplots(2,len(labels),figsize=(5,2), sharey='row', sharex=False)
     
     for i, label in enumerate(labels):
         fdir = "./data/reality/" + label
-        vals = folder_to_array_dict(fdir, rows_taken=10000)
+        vals = folder_to_array_dict(fdir, rows_taken=6000)
         plot_motors(f, ax[0,i], label, vals)
         plot_avg_fourier(f, ax[1,i], vals)
-
     ax[0,0].set_ylabel('Motor usage %')
+    ax[0,-1].legend(loc='center left', bbox_to_anchor=(1, 0.5))
     ax[1,0].set_ylabel('Normalized Amplitude')
+    ax[1,-1].legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
     f.align_ylabels()
 
     plt.show()
+    # plt.savefig("plots/reality/fourier_vs_motors.pdf")

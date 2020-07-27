@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 def plot_following(files):
     print(files)
     f,ax = plt.subplots(2,1,sharex=True,squeeze=True,figsize=(5,5))
-    colors=colors = ['#e41a1c', '#265285', '#4daf4a', '#984ea3', '#6e0178', '#ff7f00']
+    colors = ['#e41a1c', '#265285', '#4daf4a', '#984ea3', '#6e0178', '#ff7f00']
     for i, file in enumerate(files):
         (feedback_list, setpoint_list, time_list, outputs, alg_name) = pickle.load(open(file, "rb"))
         if i == 0:

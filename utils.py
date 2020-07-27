@@ -4,13 +4,15 @@ import matplotlib.pyplot as plt
 from scipy.fftpack import fft
 from scipy import stats
 
-theme = { 'red'   : '#e41a1c'
-        , 'blue'  : '#265285'
-        , 'green': '#4daf4a'
-        , 'pink' : '#984ea3'
-        , 'purple' : '#6e0178'
+theme = { 'blue'  : '#265285'
         , 'orange': '#ff7f00'
+        , 'purple' : '#8e0178'
+        , 'green': '#4daf4a'
+        , 'red'   : '#e41a1c'
+        , 'pink' : '#984ea3'
         }
+
+colors = list(theme.values())
 
 def fourier_transform(actions, T):
     N = len(actions)
@@ -51,8 +53,8 @@ def from_actions(actionss, ep_lens):
 def plot_fourier(ax_m, freqs, amplitudes, amplitudes_std=None, main_color=theme['blue'], std_color=theme['orange']):
     if not (amplitudes_std is None):
         y = amplitudes + amplitudes_std
-        ax_m.fill_between(freqs, 0, y, where=y >= 0, facecolor=std_color, alpha=1)
-    ax_m.fill_between(freqs, 0, amplitudes, where=amplitudes >= 0, facecolor=main_color)
+        ax_m.fill_between(freqs, 0, y, where=y >= 0, facecolor=std_color, alpha=1, label="$\\sigma$")
+    ax_m.fill_between(freqs, 0, amplitudes, where=amplitudes >= 0, facecolor=main_color, label="Mean")
 
 def dict_elems_apply(fn, d):
 	return {k: fn(d[k]) for k in d.keys()}
