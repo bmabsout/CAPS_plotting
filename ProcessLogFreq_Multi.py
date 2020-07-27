@@ -20,8 +20,7 @@ def bfcalc(rcCommand, rcRate=1., expo=0., superRate=0.7):
     return angleRate
 
 
-def processLog(fname, rows_taken):
-    start_from = 5000
+def processLog(fname, rows_taken, start_from=0):
     motor_vals = []
     rc_commands = []
     gyro = []
@@ -47,13 +46,13 @@ def processLog(fname, rows_taken):
                             m_cidx = i
                     continue
             else:
-                if count > 4000:
+                if count > start_from:
                     t.append(float(row[t_cidx]))
                     rc_commands.append([bfcalc(float(row[rc_cidx])/500),bfcalc(float(row[rc_cidx+1])/500),bfcalc(float(row[rc_cidx+2])/500),bfcalc(float(row[rc_cidx+3])/500)])
                     # rc_commands.append([float(row[rc_cidx]),float(row[rc_cidx+1]),float(row[rc_cidx+2]),float(row[rc_cidx+3])])
                     gyro.append([float(row[g_cidx]), float(row[g_cidx+1]), float(row[g_cidx+2])])
                     motor_vals.append([float(row[m_cidx]), float(row[m_cidx+1]), float(row[m_cidx+2]), float(row[m_cidx+3])])
-                if count > rows_taken:
+                if count > rows_taken + start_from:
                     break
                 count+=1
     print(fname, count)
@@ -71,12 +70,12 @@ def processLog(fname, rows_taken):
 
     return {'motor_vals':motor_vals, 'rc_commands':rc_commands, 'gyro':gyro, 't':t, 'amplitudess': amplitudess, 'freqs': freqs, 'smoothnesses': smoothnesses}
 
-def folder_to_array_dict(folder, rows_taken):
+def folder_to_array_dict(folder, rows_taken, start_from=0):
     logs = []
     for file in os.listdir(folder):
         if file.endswith('.csv'):
             fname = os.path.join(folder, file)
-            logs.append(processLog(fname, rows_taken))
+            logs.append(processLog(fname, rows_taken, start_from))
 
     return utils.dict_elems_apply(np.array, utils.dicts_list_to_list_dicts(logs))
 
@@ -96,27 +95,29 @@ def plot_avg_fourier(f, ax, vals):
     print("RMSE:", np.sqrt(np.average((rc_commands - vals['gyro'])**2)))
 
 
+import matplotlib.patheffects as path_effects
 def plot_motors(f, ax, label, vals):
     percentage_motors = 100*(vals["motor_vals"]/2+0.5)
     first_flight_motors = percentage_motors[0]
     t = vals["t"][0]
     t -= t[0]
     for i in range(first_flight_motors.shape[1]):
-        ax.plot(t, first_flight_motors[:,i], label=f"Motor {i}", color=utils.colors[i], alpha=0.8)
-    ax.set_title(label)
-    ax.set_xlim([0,1.0])
+
+        ax.plot(t, first_flight_motors[:,i], label=f"Motor {i+1}", color=utils.colors[i], alpha=0.8)
+                # , path_effects=[path_effects.SimpleLineShadow((1.5,-1.5)), path_effects.Normal()])
+    if label:
+        ax.set_title(label)
+    ax.set_xlim([0.01,0.99])
     # ax.set_xticklabels([])
     ax.set_xlabel('Time (s)')
 
-
-
-if __name__ == "__main__":
+def fourier_vs_motors_plot():
     labels = [ "PID","Neuroflight", "PPO+CAPS" ]
     f, ax = plt.subplots(2,len(labels),figsize=(5,2), sharey='row', sharex=False)
     
     for i, label in enumerate(labels):
         fdir = "./data/reality/" + label
-        vals = folder_to_array_dict(fdir, rows_taken=6000)
+        vals = folder_to_array_dict(fdir, rows_taken=1000, start_from=5000)
         plot_motors(f, ax[0,i], label, vals)
         plot_avg_fourier(f, ax[1,i], vals)
     ax[0,0].set_ylabel('Motor usage %')
@@ -128,3 +129,28 @@ if __name__ == "__main__":
 
     plt.show()
     # plt.savefig("plots/reality/fourier_vs_motors.pdf")
+
+def caps_motors_plot():
+    f, ax = plt.subplots(1,1)
+    vals = folder_to_array_dict("./data/reality/PPO+CAPS", rows_taken=1000, start_from=5000)
+    plot_motors(f, ax, None, vals)
+    ax.legend()
+    ax.set_ylim([20, 60])
+    ax.set_xticks([])
+    ax.set_xlabel('')
+    plt.show()
+
+def neuroflight_motors_plot():
+    f, ax = plt.subplots(1,1)
+    vals = folder_to_array_dict("./data/reality/Neuroflight", rows_taken=1000, start_from=5000)
+    plot_motors(f, ax, None, vals)
+    # ax.set_ylim([20, 60])
+    ax.set_xticks([])
+    ax.set_xlabel('')
+    plt.show()
+
+
+if __name__ == "__main__":
+    fourier_vs_motors_plot()
+    # caps_motors_plot()
+    # neuroflight_motors_plot()
