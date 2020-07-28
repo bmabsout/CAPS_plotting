@@ -5,15 +5,15 @@ from scipy.fftpack import fft
 from scipy import stats
 
 theme = { 'blue'  : '#265285'
-        , 'orange': '#ff7f00'
+        , 'orange': '#ee6e00'
+        , 'green': '#38aa38'
         , 'purple' : '#8e0178'
-        , 'green': '#4daf4a'
         , 'red'   : '#e41a1c'
         , 'pink' : '#984ea3'
         }
 
 colors = list(theme.values())
-line_styles = ['-' , '--' , '-.' , ':']
+line_styles = ['-' , '--', ':', '-.']
 
 
 def fourier_transform(actions, T):
@@ -59,7 +59,15 @@ def plot_fourier(ax_m, freqs, amplitudes, amplitudes_std=None, main_color=theme[
     ax_m.fill_between(freqs, 0, amplitudes, where=amplitudes >= 0, facecolor=main_color, label="Mean")
 
 def dict_elems_apply(fn, d):
-	return {k: fn(d[k]) for k in d.keys()}
+    return {k: fn(d[k]) for k in d.keys()}
 
 def dicts_list_to_list_dicts(l):
-	return {k: [dic[k] for dic in l] for k in l[0]}
+    return {k: [dic[k] for dic in l] for k in l[0]}
+
+def plot_with_std(ax, x, y, y_std, **kwargs):
+    line, = ax.plot(x, y, **kwargs)
+    fill_color = line.get_color()
+    fill_alpha = fill.get_color()
+    ax.fill_between(x, y-y_std, y+y_std, color=line.get_color(),alpha=line.get_alpha()*0.5)
+    between, = ax[i][0].fill(np.NaN, np.NaN, alpha=0.5, color = utils.colors[2])
+    return (between, line)

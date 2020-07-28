@@ -103,8 +103,8 @@ def plot_motors(f, ax, label, vals):
     t -= t[0]
     for i in range(first_flight_motors.shape[1]):
 
-        ax.plot(t, first_flight_motors[:,i], label=f"Motor {i+1}", color=utils.colors[i], alpha=0.8)
-                # , path_effects=[path_effects.SimpleLineShadow((1.5,-1.5)), path_effects.Normal()])
+        ax.plot(t, first_flight_motors[:,i], label=f"Motor {i+1}", color=utils.colors[i],linewidth=0.8, alpha=0.9, linestyle=utils.line_styles[i])
+                # , path_effects=[path_effects.SimpleLineShadow((1.2,-1.2)), path_effects.Normal()])
     if label:
         ax.set_title(label)
     ax.set_xlim([0.01,0.99])
@@ -133,26 +133,35 @@ def fourier_vs_motors_plot():
 def caps_motors_plot():
     f, ax = plt.subplots(1,1)
     vals = folder_to_array_dict("./data/reality/PPO+CAPS", rows_taken=1000, start_from=5000)
+    print(utils.dict_elems_apply(np.shape, vals))
+    vals["motor_vals"] = vals["motor_vals"][:,:,0:1]
     plot_motors(f, ax, None, vals)
-    ax.legend()
+    # ax.legend(loc="upper center", ncol=5, fancybox=True, shadow=True)
     ax.set_ylim([20, 60])
     ax.set_xticks([])
     ax.set_xlabel('')
+    # ax.set_yticks([])
+    # ax.set_ylabel('')
+    # plt.axis('off')
     plt.show()
 
 def neuroflight_motors_plot():
     f, ax = plt.subplots(1,1)
     vals = folder_to_array_dict("./data/reality/Neuroflight", rows_taken=1000, start_from=5000)
+    vals["motor_vals"] = vals["motor_vals"][:,:,0:1]
     plot_motors(f, ax, None, vals)
-    # ax.set_ylim([20, 60])
+    ax.set_ylim([20, 60])
     ax.set_xticks([])
+    # ax.set_yticks([])
+    # ax.set_ylabel('')
     ax.set_ylabel('Motor usage %')
 
     ax.set_xlabel('')
+    # plt.axis('off')
     plt.show()
 
 
 if __name__ == "__main__":
-    fourier_vs_motors_plot()
+    # fourier_vs_motors_plot()
     # caps_motors_plot()
-    # neuroflight_motors_plot()
+    neuroflight_motors_plot()
