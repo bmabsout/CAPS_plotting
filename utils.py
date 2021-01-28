@@ -55,7 +55,7 @@ def from_actions(actionss, ep_lens):
 def plot_fourier(ax_m, freqs, amplitudes, amplitudes_std=None, main_color=theme['blue'], std_color=theme['orange']):
     if not (amplitudes_std is None):
         y = amplitudes + amplitudes_std
-        ax_m.fill_between(freqs, 0, y, where=y >= 0, facecolor=std_color, alpha=1, label="$\\sigma$")
+        ax_m.fill_between(freqs, 0, y, where=y >= 0, facecolor=std_color, alpha=1, label="Mean$+\\sigma$")
     ax_m.fill_between(freqs, 0, amplitudes, where=amplitudes >= 0, facecolor=main_color, label="Mean")
 
 def dict_elems_apply(fn, d):
@@ -66,8 +66,7 @@ def dicts_list_to_list_dicts(l):
 
 def plot_with_std(ax, x, y, y_std, **kwargs):
     line, = ax.plot(x, y, **kwargs)
-    fill_color = line.get_color()
-    fill_alpha = fill.get_color()
-    ax.fill_between(x, y-y_std, y+y_std, color=line.get_color(),alpha=line.get_alpha()*0.5)
-    between, = ax[i][0].fill(np.NaN, np.NaN, alpha=0.5, color = utils.colors[2])
+    alpha = 1
+    ax.fill_between(x, y-y_std, y+y_std, color=line.get_color(), alpha=alpha*0.5)
+    between, = ax.fill(np.NaN, np.NaN, color=line.get_color(), alpha=alpha*0.5)
     return (between, line)

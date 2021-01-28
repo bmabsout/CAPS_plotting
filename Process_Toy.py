@@ -5,17 +5,23 @@ import utils
 import os
 
 
-def plot_following(files, ax_top, ax_bottom):
+def plot_following(files, ax_top, ax_bottom, plus_caps=None):
     # colors = ['#e41a1c', '#265285', '#4daf4a', '#984ea3', '#6e0178', '#ff7f00']
     colors = utils.colors
     handles = []
     for i, file in enumerate(files):
-        (feedback_list, setpoint_list, time_list, outputs, alg_name) = pickle.load(open(file, "rb"))
+        (feedback_list, setpoint_list, error_list, time_list, outputs, alg_name) = pickle.load(open(file, "rb"))
+        feedback_list = feedback_list[:75]
+        setpoint_list = setpoint_list[:75]
+        error_list = error_list[:75]
+        time_list = time_list[:75]
+        outputs = outputs[:75]
+        print(len(feedback_list))
+        print(len(time_list))
         if i == 0:
             handles.append(ax_top.plot(time_list, setpoint_list, color='black', label='Target')[0])
-        line = ax_top.plot(time_list, feedback_list, color=colors[i], alpha=0.8, label=alg_name, linestyle=utils.line_styles[i], linewidth=0.8)
+        line = ax_top.plot(time_list, feedback_list, color=colors[i], alpha=0.8, label=alg_name+ (plus_caps if plus_caps else ""), linestyle=utils.line_styles[i], linewidth=0.8)
         ax_top.grid(True)
-
         ax_bottom.plot(time_list, outputs, color=colors[i], alpha=0.8, label=alg_name, linestyle=utils.line_styles[i], linewidth=0.8)
         ax_bottom.set_xlabel('Time')
         ax_bottom.grid(True)
@@ -80,8 +86,10 @@ def plot_filters():
                    , "FIR": " ($11^{th}$ order)"
                    , "EMA": " ($\\alpha=0.6$)"
                    }
-    folder = "data/toy/filter_data"
-    f, ax = plt.subplots(2, len(descriptions), sharex=True, sharey='row')
+    # folder = "data/toy/filter_data"
+    # folder = "data/toy/pid_critical_damping"
+    folder = "data/toy/filter_data_crazy"
+    f, ax = plt.subplots(2, len(descriptions), sharex=True)
     setpoints = pickle.load(open(os.path.join(folder,"setpoints/setpoints.p"), "rb"))
     for i, name in enumerate(descriptions.keys()):
         (outputs, feedback) = pickle.load(open(os.path.join(folder, name+".p"), "rb"))
@@ -89,13 +97,16 @@ def plot_filters():
         ax[0,i].plot(feedback, label="Actual", color=utils.theme['purple'])
         ax[0,i].set_yticks([])
         ax[0,i].set_title(name+descriptions[name])
+        if name != "FIR":
+            ax[0,i].set_ylim([-11,-8.9])
+        ax[1,i].set_ylim([-1.2,1.2])
         ax[1,i].plot(outputs, label="Action", color=utils.theme['blue'])
         ax[1,i].set_yticks([0])
         ax[1,i].set_yticklabels([''])
         ax[1,i].set_xlabel('Time')
         ax[1,i].set_xticks([])
         ax[1,i].grid()
-    ax[0,0].legend(loc="upper center",fancybox=True, shadow=True, ncol=2, columnspacing=0.8)
+    # ax[0,0].legend(loc="upper center",fancybox=True, shadow=True, ncol=2, columnspacing=0.8)
     # ax[1,0].legend(loc="upper center",fancybox=True, shadow=True)
     ax[0,0].set_ylabel("State")
     ax[1,0].set_ylabel("Action")
@@ -105,9 +116,112 @@ def plot_filters():
     # ax[0,0].set_ylabel("State")
     # ax[1,0].set_ylabel("Actions")
     plt.show()
+# -9.5
 
+
+def state_action_distribution(ax, f, outputs, error_list):
+    outputs = np.array(outputs)[:,0]
+    error_list = np.array(error_list)
+    print(outputs.shape, error_list.shape)
+    H, yedges, xedges = np.histogram2d(outputs,error_list, bins=(60, 60))
+    logged = np.log(1+H)
+    print(logged.shape)
+    colors = ax.imshow(logged/np.max(logged), interpolation='nearest', origin='low',extent=[-1, 1, -1, 1], aspect='auto', cmap=plt.cm.BuPu)
+
+    ax.plot(np.linspace(-1.,1.,10), np.linspace(-1.,1.,10), color="green", linestyle="--")
+    ax.plot([-1,0,0,1], [-0.99,-0.99,0.99,0.99], color="red", linestyle="--", linewidth=2, alpha=0.6)
+    # plt.colorbar(colors)
+    ax.set_xlabel('State')
+    ax.set_ylabel('Action')
+
+    # f.suptitle('Agent state-action distribution')
+
+
+
+def plot_state_action():
+    folder = "data/toy/state_action"
+    file = "TD3_perlin"
+    (feedback_list, setpoint_list, error_list, time_list, outputs, alg_name) = pickle.load(open(os.path.join(folder, file+".p"), "rb"))
+    fig, ax = plt.subplots(1,1,  figsize=(3.3, 2.3))
+    plt.subplots_adjust(left=0.2, right=0.84, bottom=0.2, top=0.97)
+    state_action_distribution(ax, fig, outputs, error_list)
+    # fig.align_ylabels()
+
+
+    plt.savefig(os.path.join(folder, file+"_state_action.pdf"))
+    plt.show()
+
+def state_action_distribution_reg(ax, f, outputs, error_list):
+    outputs = np.array(outputs)[:,0]
+    error_list = np.array(error_list)
+    print(outputs.shape, error_list.shape)
+    H, yedges, xedges = np.histogram2d(outputs,error_list, bins=(60, 60))
+    logged = np.log(1+H)
+    print(logged.shape)
+    colors = ax.imshow(logged/np.max(logged), interpolation='nearest', origin='low',extent=[-1, 1, -1, 1], aspect='auto', cmap=plt.cm.BuPu)
+
+    ax.plot(np.linspace(-1.,1.,10), np.linspace(-1.,1.,10), color="green", linestyle="--")
+    ax.plot([-1,0,0,1], [-0.99,-0.99,0.99,0.99], color="red", linestyle="--", linewidth=2, alpha=0.6)
+    plt.colorbar(colors)
+    ax.set_xlabel('State')
+    # ax.set_ylabel('Action')
+    ax.set_yticklabels('')
+
+    # f.suptitle('Agent state-action distribution')
+
+def plot_state_action_reg():
+    folder = "data/toy/state_action"
+    file = "TD3_perlin_reg"
+    (feedback_list, setpoint_list, error_list, time_list, outputs, alg_name) = pickle.load(open(os.path.join(folder, file+".p"), "rb"))
+    fig, ax = plt.subplots(1,1,  figsize=(3.3, 2.3))
+    plt.subplots_adjust(left=0.2, right=1, bottom=0.2, top=0.97)
+    state_action_distribution_reg(ax, fig, outputs, error_list)
+    # fig.align_ylabels()
+
+
+    plt.savefig(os.path.join(folder, file+"_state_action.pdf"))
+    plt.show()
+
+def plot_following_single():
+    f, ax = plt.subplots(2,1,figsize=(3,4.5))
+    filename = "TD3_perlin"
+    plot_following([f"data/toy/state_action/{filename}.p"], ax[0], ax[1])
+    ax[0].set_title("Without CAPS")
+    ax[0].set_ylabel('State')
+    ax[0].set_ylim(-3.5,2)
+    # ax[0].set_yticklabels('')
+    ax[0].set_xticklabels('')
+    ax[0].legend(framealpha=0.8)
+    ax[1].set_ylim(-1,1)
+    # ax[1].set_yticklabels('')
+    ax[1].set_ylabel('Action')
+    f.align_ylabels()
+    plt.subplots_adjust(right=0.97, top=0.95,left=0.25,bottom=0.1, hspace=0.1)
+    plt.savefig(filename + "_following.pdf")
+    plt.show()
+
+def plot_following_single_reg():
+    f, ax = plt.subplots(2,1,figsize=(3,4.5))
+    filename = "TD3_perlin_reg"
+    plot_following([f"data/toy/state_action/{filename}.p"], ax[0], ax[1], "+CAPS")
+    ax[0].set_title("With CAPS")
+    # ax[0].set_ylabel('State')
+    ax[0].set_ylim(-3.5,2)
+    ax[0].set_yticklabels('')
+    ax[0].set_xticklabels('')
+    ax[0].legend(framealpha=0.8)
+    ax[1].set_ylim(-1,1)
+    ax[1].set_yticklabels('')
+    # ax[1].set_ylabel('Action')
+    f.align_ylabels()
+    plt.subplots_adjust(right=0.97, top=0.95,left=0.25,bottom=0.1, hspace=0.1)
+    plt.savefig(filename + "_following.pdf")
+    plt.show()
 
 if __name__ == "__main__":
     import sys
-    plot_filters()
+    # plot_state_action()
+    # plot_state_action_reg()
+    # plot_following_single()
+    plot_following_single_reg()
     # plot_perlin_vs_step()
