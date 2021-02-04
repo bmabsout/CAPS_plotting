@@ -115,10 +115,10 @@ env = "Pendulum-v0"
 algs_dict = data[env]
 
 ind = np.arange(len(algs_dict))  # the x locations for the groups
-width = 0.25  # the width of the bars
+width = 0.3  # the width of the bars
 
 # fig, ax = plt.subplots(figsize=(8.1,2.2))
-fig, ax = plt.subplots(2,len(data), sharex=True, figsize=(8.1,3.2))
+fig, ax = plt.subplots(2,len(data), sharex=True, figsize=(7,5.1))
 ax2 = ax[1,0]
 ax1 = ax[0,0]
 left_color = utils.colors[0]
@@ -196,6 +196,6 @@ legend = [
 
 ax[1,1].legend(*zip(*legend), loc='upper center',
           ncol=1)
-plt.subplots_adjust(left=0.09, bottom=0.1, right=0.996, wspace=0.26, top=.92, hspace=0.2)
+plt.subplots_adjust(left=0.1, bottom=0.05, right=0.996, wspace=0.3, top=.95, hspace=0.17)
 plt.savefig("plots/asymmetric/asymmetric_vs_symmetric.pdf")
 # plt.show()
