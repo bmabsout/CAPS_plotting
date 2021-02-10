@@ -38,7 +38,7 @@ def cut_data(actionss, ep_lens):
 
 def to_array_truncate(l):
     min_len = min(map(len, l))
-    return np.array(list(map(lambda x: x[min_len:], l)))
+    return np.array(list(map(lambda x: x[:min_len], l)))
 
 
 def combine(fouriers):
