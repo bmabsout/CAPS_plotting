@@ -13,68 +13,59 @@ sim_gyros = sim_gyros[:len(t)]
 real_gyros = real_gyros[:len(t)]
 set_points = set_points[:len(t)]
 
-def plot_following(index):
-    ax[index].plot(t, set_points[:,index],"-", label="desired", linewidth=3, alpha=1, color="black")
-    ax[index].plot(t, real_gyros[:,index], label="reality", linewidth=1, alpha=1, linestyle="-", color=utils.colors[5])
-    ax[index].plot(t, sim_gyros[:,index], linewidth=1, alpha=1, label="simulation", linestyle="-.", color=utils.colors[1])
+figsize=(8,5)
+xlim = [30,60]
+
+def plot_following(ax, index):
+    ax.plot(t, set_points[:,index],"-", label="desired", linewidth=3, alpha=1, color="black")
+    ax.plot(t, real_gyros[:,index], label="reality", linewidth=1, alpha=1, linestyle="-", color=utils.colors[5])
+    ax.plot(t, sim_gyros[:,index], linewidth=1, alpha=1, label="simulation", linestyle="-.", color=utils.colors[1])
 
 
 def left_plot():
-    fig, ax = plt.subplots(3, sharex=True, figsize=(15,7))
+    fig, ax = plt.subplots(3, sharex=True, figsize=figsize)
 
-    print(sim_gyros.shape)
-    print(t.shape)
-    def plot_following(index):
-        ax[index].plot(t, set_points[:,index],"-", label="desired", linewidth=3, alpha=1, color="black")
-        ax[index].plot(t, real_gyros[:,index], label="reality", linewidth=1, alpha=1, linestyle="-", color=utils.colors[5])
-        ax[index].plot(t, sim_gyros[:,index], linewidth=1, alpha=1, label="simulation", linestyle="-.", color=utils.colors[1])
-    plot_following(0)
-    plot_following(1)
-    plot_following(2)
+    plot_following(ax[0], 0)
+    plot_following(ax[1], 1)
+    plot_following(ax[2], 2)
 
-    ax[0].legend(ncol = 3, loc='upper center', bbox_to_anchor=(0.5, 1.5), columnspacing=0.8)
-    ax[0].set_ylabel("Roll")
-    ax[1].set_ylabel("Pitch")
-    ax[2].set_ylabel("Yaw")
+    ax[0].legend(ncol = 3, loc='upper center', bbox_to_anchor=(0.5, 1.38), columnspacing=0.8)
+    ax[0].set_ylabel("Roll (deg/s)")
+    ax[1].set_ylabel("Pitch (deg/s)")
+    ax[2].set_ylabel("Yaw (deg/s)")
 
-    ax[3].set_xlabel("Time (s)")
+    ax[2].set_xlabel("Time (s)")
+    ax[2].set_xlim(xlim)
 
     fig.align_ylabels()
 
     # plt.savefig("plots/gap/following.pdf")
+    plt.subplots_adjust(left=0.1, right=0.98, top=0.9)
     plt.show()
 
 
 def right_plot():
-    fig, ax = plt.subplots(1, sharex=True, figsize=(15,7))
+    fig, ax = plt.subplots(1, sharex=True, figsize=figsize)
 
-    print(sim_gyros.shape)
-    print(t.shape)
-    def plot_following(index):
-        ax[index].plot(t, set_points[:,index],"-", label="desired", linewidth=3, alpha=1, color="black")
-        ax[index].plot(t, real_gyros[:,index], label="reality", linewidth=1, alpha=1, linestyle="-", color=utils.colors[5])
-        ax[index].plot(t, sim_gyros[:,index], linewidth=1, alpha=1, label="simulation", linestyle="-.", color=utils.colors[1])
-    plot_following(0)
-    plot_following(1)
-    plot_following(2)
+    ax.plot(t, errors[:,0], color=utils.colors[3], label="roll", linestyle="-.", linewidth=0.8, alpha=0.7)
+    ax.plot(t, errors[:,1], color=utils.colors[2], label="pitch", linestyle="-.", linewidth=0.8, alpha=0.7)
+    ax.plot(t, errors[:,2], color=utils.colors[0], label="yaw", linestyle="-.", linewidth=0.8, alpha=0.7)
+    # ax.legend()
 
-    ax[3].plot(t, errors[:,0], color=utils.colors[3], label="roll", linestyle="-.", linewidth=0.8)
-    ax[3].plot(t, errors[:,1], color=utils.colors[2], label="pitch", linestyle="-.", linewidth=0.8)
-    ax[3].plot(t, errors[:,2], color=utils.colors[0], label="yaw", linestyle="-.", linewidth=0.8)
-    ax[3].legend()
+    ax.legend(ncol = 3, loc='upper center', bbox_to_anchor=(0.5, 1.11), columnspacing=0.8)
 
-    ax[0].legend(ncol = 3, loc='upper center', bbox_to_anchor=(0.5, 1.5), columnspacing=0.8)
-    ax[0].set_ylabel("Roll")
-    ax[1].set_ylabel("Pitch")
-    ax[2].set_ylabel("Yaw")
-    ax[3].set_ylabel("Reality Gap")
-
-    ax[3].set_xlabel("Time (s)")
+    ax.set_xlabel("Time (s)")
+    ax.set_xlim(xlim)
+    ax.set_ylim([-1, 150])
+    ax.yaxis.set_label_position("right")
+    ax.yaxis.tick_right()
+    ax.set_ylabel("SPG (deg/s)")
 
     fig.align_ylabels()
 
     # plt.savefig("plots/gap/following.pdf")
+    plt.subplots_adjust(left=0.02, right=0.9, top=0.9)
     plt.show()
 
 
-left_plot()
+right_plot()
