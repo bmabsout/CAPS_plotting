@@ -39,9 +39,10 @@ def left_plot():
 
     fig.align_ylabels()
 
-    # plt.savefig("plots/gap/following.pdf")
     plt.subplots_adjust(left=0.1, right=0.98, top=0.9)
-    plt.show()
+    # plt.show()
+    plt.savefig("plots/gap/following_left.pdf")
+
 
 
 def right_plot():
@@ -65,7 +66,8 @@ def right_plot():
 
     # plt.savefig("plots/gap/following.pdf")
     plt.subplots_adjust(left=0.02, right=0.9, top=0.9)
-    plt.show()
+    # plt.show()
+    plt.savefig("plots/gap/following_right.pdf")
 
-
+left_plot()
 right_plot()
