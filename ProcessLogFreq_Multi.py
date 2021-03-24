@@ -20,7 +20,7 @@ def bfcalc(rcCommand, rcRate=1., expo=0., superRate=0.7):
     return angleRate
 
 
-def processLog(fname, rows_taken, start_from=0):
+def processLog(fname, rows_taken=None, start_from=0):
     motor_vals = []
     rc_commands = []
     gyro = []
@@ -56,7 +56,7 @@ def processLog(fname, rows_taken, start_from=0):
                     # rc_commands.append([float(row[rc_cidx]),float(row[rc_cidx+1]),float(row[rc_cidx+2]),float(row[rc_cidx+3])])
                     gyro.append([float(row[g_cidx]), float(row[g_cidx+1]), float(row[g_cidx+2])])
                     motor_vals.append([float(row[m_cidx]), float(row[m_cidx+1]), float(row[m_cidx+2]), float(row[m_cidx+3])])
-                if count > rows_taken + start_from:
+                if rows_taken and count > rows_taken + start_from:
                     break
                 count+=1
     amps = np.array(amps)
@@ -98,6 +98,7 @@ def plot_avg_fourier(f, ax, vals):
     print("smoothness:", np.mean(vals['smoothnesses']))
     print("smoothness_std:", np.std(vals['smoothnesses']))
     print("MAE:", np.average(np.abs(rc_commands - vals['gyro'])))
+    print("MAES:", np.average(np.abs(rc_commands - vals['gyro']), axis=(1,2)))
     print("MAE_std:", np.std(np.average(np.abs(rc_commands - vals['gyro']), axis=(1,2))))
     print("Amps:", np.average(vals['amps']))
     print("Amps_std:", np.std(np.average(vals['amps'],axis=1)))
@@ -126,7 +127,7 @@ def fourier_vs_motors_plot():
     
     for i, label in enumerate(labels):
         fdir = "./data/reality/" + label
-        vals = folder_to_array_dict(fdir, rows_taken=1000, start_from=5000)
+        vals = folder_to_array_dict(fdir, rows_taken=6000, start_from=3000)
         plot_motors(f, ax[0,i], label, vals)
         plot_avg_fourier(f, ax[1,i], vals)
     ax[0,0].set_ylabel('Motor usage %')
