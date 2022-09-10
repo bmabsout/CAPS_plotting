@@ -90,7 +90,7 @@ def plot_avg_fourier(f, ax, vals):
                       , freqs          = vals['freqs'][0]
                       , amplitudes     = vals['amplitudess'].mean(axis=(0,1))
                       , amplitudes_std = vals['amplitudess'].std(axis=(0,1)))
-    ax.set_ylim([0,0.07])
+    ax.set_ylim([0,0.04])
     ax.set_xlabel('Frequency (Hz)')
     # ax.set_title(f"Smoothness: {np.mean(vals['smoothnesses'])*10**3:.2f}$\\pm${np.std(vals['smoothnesses'])*10**3:.2f}")
 
@@ -99,9 +99,9 @@ def plot_avg_fourier(f, ax, vals):
     print("smoothness_std:", np.std(vals['smoothnesses']))
     print("MAE:", np.average(np.abs(rc_commands - vals['gyro'])))
     print("MAES:", np.average(np.abs(rc_commands - vals['gyro']), axis=(1,2)))
-    print("MAE_std:", np.std(np.average(np.abs(rc_commands - vals['gyro']), axis=(1,2))))
+    print("MAE_std:", np.std(np.abs(rc_commands - vals['gyro'])))
     print("Amps:", np.average(vals['amps']))
-    print("Amps_std:", np.std(np.average(vals['amps'],axis=1)))
+    print("Amps_std:", np.std(vals['amps']))
     # print("RMSE:", np.sqrt(np.average((rc_commands - vals['gyro'])**2)))
 
 
@@ -113,32 +113,33 @@ def plot_motors(f, ax, label, vals):
     t -= t[0]
     for i in range(first_flight_motors.shape[1]):
 
-        ax.plot(t, first_flight_motors[:,i], label=f"Motor {i+1}", color=utils.colors[i],linewidth=0.8, alpha=0.9, linestyle=utils.line_styles[i])
+        ax.plot(t, first_flight_motors[:,i], label=f"Motor {i+1}", color=utils.colors[i],linewidth=0.7, alpha=1.0/(1+i*0.2), linestyle=utils.line_styles[i])
                 # , path_effects=[path_effects.SimpleLineShadow((1.2,-1.2)), path_effects.Normal()])
     if label:
         ax.set_title(label)
-    ax.set_xlim([0.01,0.99])
+    # ax.set_xlim([0.01,0.99])
     # ax.set_xticklabels([])
     ax.set_xlabel('Time (s)')
 
-def fourier_vs_motors_plot():
-    labels = [ "PID","Neuroflight", "PPO+Temporal", "PPO+Spatial", "PPO+CAPS"]
-    f, ax = plt.subplots(2,len(labels),figsize=(5,2), sharey='row', sharex=False)
+def fourier_vs_motors_plot(labels=[ "PID","Neuroflight", "PPO+Temporal", "PPO+Spatial", "PPO+CAPS"]):
+    f, ax = plt.subplots(2,len(labels),figsize=(7,3.2), sharey='row', sharex=False, constrained_layout=True)
     
     for i, label in enumerate(labels):
         fdir = "./data/reality/" + label
-        vals = folder_to_array_dict(fdir, rows_taken=6000, start_from=3000)
+        vals = folder_to_array_dict(fdir, rows_taken=6000, start_from= 3000)
         plot_motors(f, ax[0,i], label, vals)
         plot_avg_fourier(f, ax[1,i], vals)
     ax[0,0].set_ylabel('Motor usage %')
-    ax[0,-1].legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    # ax[0,-1].legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    ax[0,-1].legend(loc='center right')
     ax[1,0].set_ylabel('Normalized Amplitude')
-    ax[1,-1].legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    # ax[1,-1].legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    ax[1,-1].legend(loc='center right')
 
     f.align_ylabels()
 
+    plt.savefig(f"plots/reality/{str(labels)}.pdf")
     plt.show()
-    # plt.savefig("plots/reality/fourier_vs_motors.pdf")
 
 def caps_motors_plot():
     f, ax = plt.subplots(1,1)
@@ -191,10 +192,107 @@ def fourier_vs_motors_real_plot():
     plt.show()
 
 
+def plot_following(desired_rpy, rpy, motor_outputs, t_diff=0.00137):
+    print(desired_rpy.shape)
+    print(rpy.shape)
+    print(motor_outputs.shape)
+    rpy_std = np.std(rpy[2:,:,:],axis=0)
+
+    f, ax = plt.subplots(4,1, sharex=True, sharey=False, constrained_layout=True, figsize=(3.7,5))
+
+    # plt.setp([a.get_xticklabels() for a in f.axes[:-1]], visible=False)
+    t = np.array(range(len(desired_rpy[:,0]))) * t_diff
+    # colors = ['#e41a1c', '#265285', '#4daf4a', '#984ea3', '#6e0178', '#ff7f00']
+
+    def plot_desired_vs_actual(i,label):
+        desired = ax[i].plot(t, desired_rpy[:,i],"-", label="Desired", linewidth=3, alpha=1, color="black")
+        rpy_mean = np.mean(rpy[0:,:,i],axis=0)
+        ours=ax[i].plot(t, rpy_mean, linewidth=1.5, alpha=1, linestyle="-", color=utils.colors[2])
+        ax[i].fill_between(t, rpy_mean-rpy_std[:,i], rpy_mean+rpy_std[:,i], color=utils.colors[2],alpha=0.5)
+        between = ax[i].fill(np.NaN, np.NaN, alpha=0.5, color = utils.colors[2])
+        ax[i].set_ylabel(label)
+        if i == 0:
+            ax[0].legend([desired[0],ours[0]], ["Desired", "Actual"], loc="center left")
+        print(rpy.shape)
+        print(desired_rpy.shape)
+        print(i)
+        mae = np.mean(np.abs(rpy[0,:,i] - desired_rpy[:,i]))
+        print(mae)
+        print("MAE:",label, np.mean(mae))
+        print("MAE std:",label, np.std(mae))
+        return mae
+
+    mae1 = plot_desired_vs_actual(0, "Roll (deg/s)")
+    mae2 = plot_desired_vs_actual(1, "Pitch (deg/s)")
+    mae3 = plot_desired_vs_actual(2, "Yaw (deg/s)")
+    print(mae1.shape)
+    print("all:", np.mean(np.vstack([mae1, mae2, mae3])))
+    print("all std:", np.std(np.vstack([mae1, mae2, mae3])))
+
+    def plot_motor_outputs(i, label):
+        ax[i].set_ylabel(label)
+        lines = ["-", "-.", ":", "--"]
+        for j in range(4):
+            ax[i].plot(t, motor_outputs[0, :, j], label="Motor {}".format(j+1), linestyle=lines[j], alpha=0.8)
+
+    plot_motor_outputs(3, "Adapted (%)")
+    ax[3].legend(loc="center left")
+    f.align_ylabels()
+    ax[3].set_xlabel("Time (s)")
+
+    return f, ax
+
+
+def plot_error_and_motor_outputs(desired_rpy, rpy, motor_outputs, t_diff=0.00137, figsize=(7,2)):
+    print(desired_rpy.shape, rpy.shape, motor_outputs.shape)
+    f, ax = plt.subplots(1,2, sharex=True, sharey=False, constrained_layout=True, figsize=figsize)
+
+    # plt.setp([a.get_xticklabels() for a in f.axes[:-1]], visible=False)
+    t = np.array(range(len(desired_rpy[:,0]))) * t_diff
+    # colors = ['#e41a1c', '#265285', '#4daf4a', '#984ea3', '#6e0178', '#ff7f00']
+
+    def plot_error():
+        errors = ax[0].plot(t, np.mean(np.abs(desired_rpy - rpy), axis=1),"-", label="Desired", linewidth=3, alpha=1, color="black")
+        # ax[0].legend([errors[0]], ["MAE"], loc="upper left")
+        ax[0].set_ylabel("MAE (deg/s)")
+        ax[0].set_xlabel("Time (s)")
+
+    plot_error()
+
+    def plot_motor_outputs():
+        ax[1].set_ylabel("Motor Usage (%)")
+        ax[1].set_xlabel("Time (s)")
+        lines = ["-", "-.", ":", "--"]
+        for j in range(4):
+            ax[1].plot(t, motor_outputs[:, j], label="Motor {}".format(j+1), linestyle=lines[j], alpha=0.8)
+        ax[1].legend(loc="upper left")
+
+    plot_motor_outputs()
+    return f, ax
+
+def DDPG_with_Q_adapt_plot():
+    vals = folder_to_array_dict("./data/reality/DDPGxQRegAdapt", rows_taken=350, start_from=1000)
+    # vals["motor_vals"] = vals["motor_vals"][:,:,0:1]
+    f, ax = plot_following(np.squeeze(vals["rc_commands"])[:,:3], vals["gyro"], vals["motor_vals"])
+    plt.savefig("plots/reality/adaptation/DDPGxQRegAdapt.pdf")
+    plt.show()
+
+
+def DDPG_with_Q_adapt_error_plot():
+    vals = folder_to_array_dict("./data/reality/DDPGxQRegAdapt", rows_taken=350, start_from=1000)
+    # vals["motor_vals"] = vals["motor_vals"][:,:,0:1]
+    f, ax = plot_error_and_motor_outputs(vals["rc_commands"][0,:,:3], np.squeeze(vals["gyro"]), np.squeeze(vals["motor_vals"]), figsize=(7,1.6))
+    plt.savefig("plots/reality/adaptation/DDPGxQRegAdaptErrors.pdf")
+    plt.show()
+
 
 if __name__ == "__main__":
+    # DDPG_with_Q_adapt_plot()
+    # DDPG_with_Q_adapt_error_plot()
     # fourier_vs_motors_real_plot()
-    fourier_vs_motors_plot()
+    # fourier_vs_motors_plot()
+    fourier_vs_motors_plot(["Before adaptation", "After adaptation"])
+    # fourier_vs_motors_plot(["Before adaptation", "After adaptation"])
     # caps_motors_plot()
     # real_motors_plot()
     # neuroflight_motors_plot()

@@ -5,9 +5,9 @@ from scipy.fftpack import fft
 from scipy import stats
 
 theme = { 'blue'  : '#265285'
-        , 'orange': '#ee6e00'
-        , 'green': '#38aa38'
         , 'purple' : '#8e0178'
+        , 'green': '#38aa38'
+        , 'orange': '#ee6e00'
         , 'red'   : '#e41a1c'
         , 'pink' : '#984ea3'
         }
@@ -26,6 +26,13 @@ def fourier_transform(actions, T):
 def smoothness(amplitudes):
     normalized_freqs = np.linspace(0, 1, amplitudes.shape[0])
     return np.mean(amplitudes * normalized_freqs)
+
+def motors_smoothness(motors):
+    smoothnesses = []
+    for i in range(motors.shape[1]):
+        freqs, amplitudes = fourier_transform(motors[:,i]*2-1,1)
+        smoothnesses.append(smoothness(amplitudes))
+    return np.mean(smoothnesses)
 
 def center_of_mass(freqs, amplitudes):
     return np.sum(freqs * amplitudes) / sum(amplitudes)
@@ -52,7 +59,7 @@ def from_actions(actionss, ep_lens):
     fouriers = list(map(fourier_transform, cut_data(actionss, ep_lens)))
     return combine(fouriers)
 
-def plot_fourier(ax_m, freqs, amplitudes, amplitudes_std=None, main_color=theme['blue'], std_color=theme['orange']):
+def plot_fourier(ax_m, freqs, amplitudes, amplitudes_std=None, main_color=theme['orange'], std_color=theme['blue']):
     if not (amplitudes_std is None):
         y = amplitudes + amplitudes_std
         ax_m.fill_between(freqs, 0, y, where=y >= 0, facecolor=std_color, alpha=1, label="Mean$+\\sigma$")

@@ -218,10 +218,45 @@ def plot_following_single_reg():
     plt.savefig(filename + "_following.pdf")
     plt.show()
 
+
+def plot_anchor_pendulum():
+    fig = plt.figure(figsize=(3, 2), constrained_layout=True)
+    gs = fig.add_gridspec(1, 2, hspace=0.1, wspace=0.07, left=0.05, bottom=0.24, top=0.9, right=0.99)
+    left_leaning  = pickle.load(open("data/toy/anchor/left_leaning.p", "rb"))
+    up_leaning    = pickle.load(open("data/toy/anchor/up_leaning.p", "rb"))
+    right_leaning = pickle.load(open("data/toy/anchor/right_leaning.p", "rb"))
+    plt.plot(left_leaning[:75,1])
+    plt.plot(right_leaning[:75,1])
+    plt.plot(up_leaning[:75,1])
+    plt.xlabel('steps')
+    plt.ylabel('$cos(\\theta)$')
+    plt.grid(True)
+    plt.savefig("plots/toy/anchor.pdf")
+    plt.show()
+
+def plot_many_anchor_pendulum(alg="ddpg"):
+    fig = plt.figure(figsize=(4, 3), constrained_layout=True)
+    gs = fig.add_gridspec(1, 2, hspace=0.1, wspace=0.07, left=0.05, bottom=0.24, top=0.9, right=0.99)
+    left_leaning  = pickle.load(open(f"data/toy/anchor/{alg}_left.p", "rb"))
+    up_leaning    = pickle.load(open(f"data/toy/anchor/{alg}_anchored.p", "rb"))
+    plt.plot(left_leaning.T[:75, 0],color="tab:blue", alpha=1.0, label="initial goal", linestyle=utils.line_styles[1])
+    plt.plot(left_leaning.T[:75, 1:],color="tab:blue", alpha=1.0, linestyle=utils.line_styles[1])
+    plt.plot(up_leaning.T[:75, 0],color="tab:orange", alpha=1.0, label="anchored", linestyle=utils.line_styles[3])
+    plt.plot(up_leaning.T[:75, 1:],color="tab:orange", alpha=1.0, linestyle=utils.line_styles[3])
+    plt.axhline(y=np.cos(-np.pi/5)-1.0, color="tab:red", label="new goal", linestyle=utils.line_styles[2])
+    plt.legend()
+    plt.xlabel('steps')
+    plt.ylabel('$cos(\\theta)$')
+    plt.grid(True)
+    plt.savefig(f"plots/toy/pendulum_anchor_{alg}.pdf")
+    plt.show()
+
+
 if __name__ == "__main__":
     import sys
     # plot_state_action()
     # plot_state_action_reg()
     # plot_following_single()
-    plot_following_single_reg()
+    # plot_following_single_reg()
     # plot_perlin_vs_step()
+    plot_many_anchor_pendulum("sac")

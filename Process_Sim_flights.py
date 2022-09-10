@@ -1,6 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 import utils
+import pickle
 
 t_diff = 0.00137
 
@@ -27,7 +28,10 @@ def plot_motor(desired_rpy, rpy, motor_ouptuts):
     return f, ax
 
 
-def plot_following(desired_rpy, rpy, motor_ouptuts):
+def plot_following(desired_rpy, rpy, motor_outputs):
+    print(desired_rpy.shape)
+    print(rpy.shape)
+    print(motor_outputs.shape)
     rpy_std = np.std(rpy[2:,:,:],axis=0)
 
     f, ax = plt.subplots(3,2, sharex=True, sharey=False)
@@ -90,19 +94,12 @@ def plot_rpy(t, rpy_algs_dict, parent_grid):
             ax.plot(t, alg, label=alg_label, **kwargs)
         axs.append(ax)
 
-    axs[0].get_shared_y_axes().join(*axs)
+    # axs[0].get_shared_y_axes().join(*axs)
     axs[0].get_shared_x_axes().join(*axs)
 
     for ax in axs[:-1]:
         ax.set_xticklabels([])
     return axs
-
-def smoothness(motors):
-    smoothnesses = []
-    for i in range(motors.shape[1]):
-        freqs, amplitudes = utils.fourier_transform(motors[:,i]*2-1,1)
-        smoothnesses.append(utils.smoothness(amplitudes))
-    return np.mean(smoothnesses)
 
 
 def plot_motor_outputs(t, motor_outputs, parent_grid, labels, sharex, label_pos="right"):
@@ -121,14 +118,14 @@ def plot_motor_outputs(t, motor_outputs, parent_grid, labels, sharex, label_pos=
     for ax in axs[:-1]:
         ax.set_xticklabels([])
     # for i in motor_outputs.shape[]
-    print("Smoothness_no_reg:", smoothness(motor_outputs[0]))
-    print("Smoothness_reg:", smoothness(motor_outputs[1]))
+    # print("Smoothness_no_reg:", utils.motors_smoothness(motor_outputs[0]))
+    # print("Smoothness_reg:", utils.motors_smoothness(motor_outputs[1]))
     return axs
 
 
-def plot_reg_vs_no_reg(desired_rpy, rpy, motor_outputs, labels):
-    fig = plt.figure(figsize=(6, 6))
-    gs = fig.add_gridspec(1, 2, left=0.07, bottom=0.21, right=0.94, top = 0.943, wspace=0.05)
+def plot_following_side_by_side(desired_rpy, rpy, motor_outputs, labels, legend1=(0.1, -0.9), legend2=(0, -0.59) , grid_spec={"left":0.07, "bottom":0.21, "right":0.94, "top":0.943, "wspace":0.05}, figsize=(6, 6)):
+    fig = plt.figure(figsize=figsize)
+    gs = fig.add_gridspec(1, 2, **grid_spec)
     t = np.array(range(len(desired_rpy[:,0]))) * t_diff
     rpy_algs_dict = {}
     rpy_labels = ["Roll (deg/s)", "Pitch (deg/s)", "Yaw (deg/s)"]
@@ -147,9 +144,9 @@ def plot_reg_vs_no_reg(desired_rpy, rpy, motor_outputs, labels):
     axs_rpy[-1].set_xlabel("Time (s)")
     axs_motor[-1].set_xlabel("Time (s)")
 
-    axs_rpy[-1].legend(loc='lower left', bbox_to_anchor=(0.1, -0.9),
+    axs_rpy[-1].legend(loc='lower left', bbox_to_anchor=legend1,
           ncol=4, fancybox=True, shadow=True, columnspacing=0.8)
-    axs_motor[-1].legend(loc='lower left', bbox_to_anchor=(0, -0.59),
+    axs_motor[-1].legend(loc='lower left', bbox_to_anchor=legend2,
           ncol=4, fancybox=True, shadow=True, columnspacing=0.8)
 
     axs_rpy[0].set_title("a) RPY tracking")
@@ -225,20 +222,24 @@ def plot_no_reg_only(desired_rpy, rpy, motor_outputs, labels):
     fig.align_ylabels()
 
 
-def motor_smoothness(motor_outputs):
+def mean_std_motor_smoothness(motor_outputs):
+    smoothnesses = []
+    for i in range(motor_outputs.shape[0]):
+        smoothnesses.append(utils.motors_smoothness(motor_outputs[i]))
+    return np.mean(smoothnesses), np.std(smoothnesses)
+
+def pid_wil_caps_motor_smoothness(motor_outputs):
     print(motor_outputs.shape)
     pid = motor_outputs[0]
     wil = motor_outputs[1]
     caps = motor_outputs[2:]
-    print("wil:",smoothness(wil))
-    print("pid:",smoothness(pid))
-    caps_smoothnesses = []
-    for i in range(caps.shape[0]):
-        caps_smoothnesses.append(smoothness(caps[i]))
-    print("caps:", np.mean(caps_smoothnesses), np.std(caps_smoothnesses))
+    print("wil:",utils.motors_smoothness(wil))
+    print("pid:",utils.motors_smoothness(pid))
+    mean_caps, std_caps = mean_std_motor_smoothness(caps)
+    print("caps:", mean_caps, std_caps)
 
 
-def plot_progresses(all_xs, all_ys, headers):
+def plot_progresses(all_xs, all_ys, headers, with_total=True, size=(7,10), epoch_size=10000):
     print(headers)
     print(all_ys.shape)
     x = np.mean(all_xs,axis=1)
@@ -248,14 +249,14 @@ def plot_progresses(all_xs, all_ys, headers):
             }
     # total_rws = "Total Reward", all_ys[:, 3]
     # rights
-    f, ax = plt.subplots(len(data) + 1, sharex=True, sharey=False)
+    f, ax = plt.subplots(len(data) + (1 if with_total else 0), sharex=True, sharey=False, constrained_layout=True)
 
     # plot a single trial for all the metrics
     left_color = utils.theme["blue"]
-    right_color = utils.theme["purple"]
+    right_color = utils.theme["orange"]
 
     def plot_progress(ax, x, y, y_std, color, label):
-        utils.plot_with_std(ax, x, y, y_std, color=color)
+        utils.plot_with_std(ax, x*epoch_size, y, y_std, color=color)
         ax.tick_params(axis='y', labelcolor=color)
         ax.set_ylabel(label, color=color)
         # ax.set_yscale('log')
@@ -264,39 +265,83 @@ def plot_progresses(all_xs, all_ys, headers):
         plot_progress(ax[i], x, np.mean(left_data, axis=1), np.std(left_data, axis=1), left_color, left_label)
         plot_progress(ax[i].twinx(), x, np.mean(right_data, axis=1), np.std(right_data, axis=1), right_color, right_label)
         # ax[i].set_yscale('log')
-
-    plot_progress(ax[-1],  x, np.mean(all_ys[:,:, 3], axis=1), np.std(all_ys[:,:,3], axis=1), left_color, "Total reward")
-    ax[-1].set_xlabel("TimeSteps")
+    if with_total:
+        plot_progress(ax[-1],  x, np.mean(all_ys[:,:, 3], axis=1), np.std(all_ys[:,:,3], axis=1), left_color, "Total reward")
+    ax[-1].set_xlabel("Timesteps")
     f.align_ylabels()
-    f.set_size_inches(7,10)
+    f.set_size_inches(size[0],size[1])
 
+
+def plot_following_ppo_caps():
+    (desired_rpy, rpy, motor_outputs) = pickle.load(open("data/simulation/ppo+caps.p", "rb"))
+    plot_following(desired_rpy, rpy, motor_outputs)
+    plt.show()
+
+
+def plot_motors_ppo_caps():
+    (desired_rpy, rpy, motor_outputs) = pickle.load(open("data/simulation/ppo+caps.p", "rb"))
+    plot_motor(desired_rpy,rpy, motor_outputs)
+
+def plot_reg_vs_no_reg_caps():
+    (desired_rpy, rpy, motor_outputs) = pickle.load(open("data/simulation/reg_vs_no_reg.p", "rb"))
+    plot_following_side_by_side(desired_rpy, rpy, motor_outputs, [("PPO", utils.theme["blue"], '-.'),("PPO+CAPS", utils.theme["orange"],'-')])
+
+def plot_reg_vs_no_reg_caps_focused():
+    (desired_rpy, rpy, motor_outputs) = pickle.load(open("data/simulation/reg_vs_no_reg.p", "rb"))
+    plot_reg_only(desired_rpy[4500:, :], rpy[:,4500:,:], motor_outputs[:, 4500:, :], [("Without CAPS", utils.theme["blue"], '-.'),("With CAPS", utils.theme["orange"],'-')])
+
+def plot_no_reg_only_caps_focused():
+    (desired_rpy, rpy, motor_outputs) = pickle.load(open("data/simulation/reg_vs_no_reg.p", "rb"))
+    print(desired_rpy.shape, rpy.shape, motor_outputs.shape)
+    plot_no_reg_only(desired_rpy[4500:, :], rpy[:,4500:,:], motor_outputs[:, 4500:, :], [("Without CAPS", utils.theme["blue"], '-.'),("With CAPS", utils.theme["orange"],'-')])
+
+def plot_progress_agents():
+    (all_xs, all_ys, headers) = pickle.load(open("data/simulation/progress_agents.p","rb"))
+    plot_progresses(all_xs, all_ys, headers)
+    plt.show()
+
+def plot_pid_vs_neuroflight_caps_smoothness():
+    (desired_rpy, rpy, motor_outputs) = pickle.load(open("data/simulation/pid_wil_caps.p", "rb"))
+    motor_smoothness(motor_outputs)
+
+def plot_sim_real_gap():
+    (desired_rpy, rpy, motor_outputs) = pickle.load(open("data/simulation/sim_REAL.p", "rb"))
+    print(mean_std_motor_smoothness(motor_outputs))
+
+def plot_multi_composed_ddpgx_progress():
+    (all_xs, all_ys, headers) = pickle.load(open("data/simulation/multi_comp_tf2_ddpg_cff12c6b.p","rb"))
+    plot_progresses(all_xs, all_ys, headers, with_total=False, size=(5.95,5.25))
+    plt.savefig("plots/simulation/multi_comp_tf2_ddpg_cff12c6b.pdf")
+    # plt.show()
+
+
+def plot_linear_composed_ddpg_progress():
+    (all_xs, all_ys, headers) = pickle.load(open("data/simulation/linear_comp_tf2_ddpg_ca1e5053.p","rb"))
+    plot_progresses(all_xs, all_ys, headers, with_total=False, size=(5.95,5.25))
+    plt.savefig("plots/simulation/linear_comp_tf2_ddpg_ca1e5053.pdf")
+    # plt.show()
+
+def plot_following_30(alg):
+    (desired_rpy, rpy, motor_outputs) = pickle.load(open(f"data/simulation/after_30_epochs/{alg}_example.p", "rb"))
+    print(desired_rpy.shape, rpy.shape, motor_outputs.shape)
+    desired_rpy = desired_rpy[:2500]
+    rpy = rpy[:,:2500]
+    motor_outputs = motor_outputs[:,:2500]
+    plot_following_side_by_side(desired_rpy, rpy, motor_outputs, [("Output", utils.theme["blue"], '-.')], figsize=(9,3.5),
+        grid_spec={"left":0.1, "bottom":0.2, "right":0.94, "top":0.93, "wspace":0.05},
+        legend1=(0.2, -0.93), legend2=(-0.05, -0.29))
+    plt.savefig(f"plots/simulation/after_30_epochs/{alg}_example.pdf")
+    plt.show()
 
 
 if __name__ == "__main__":
-    import pickle
-    # (desired_rpy, rpy, motor_outputs) = pickle.load(open("data/simulation/ppo+caps.p", "rb"))
-    # plot_following(desired_rpy, rpy, motor_outputs)
-
-    # (desired_rpy, rpy, motor_outputs) = pickle.load(open("data/simulation/ppo+caps.p", "rb"))
-    # plot_motor(desired_rpy,rpy, motor_outputs)
-
-    (desired_rpy, rpy, motor_outputs) = pickle.load(open("data/simulation/reg_vs_no_reg.p", "rb"))
-    plot_reg_vs_no_reg(desired_rpy, rpy, motor_outputs, [("PPO", utils.theme["blue"], '-.'),("PPO+CAPS", utils.theme["orange"],'-')])
-
-    # (desired_rpy, rpy, motor_outputs) = pickle.load(open("data/simulation/reg_vs_no_reg.p", "rb"))
-    # plot_reg_only(desired_rpy[4500:, :], rpy[:,4500:,:], motor_outputs[:, 4500:, :], [("Without CAPS", utils.theme["blue"], '-.'),("With CAPS", utils.theme["orange"],'-')])
+    # plot_multi_composed_ddpgx_progress()
+    # plot_linear_composed_ddpg_progress()
+    # plot_following_ppo_caps()
+    plot_following_30("td3")
+    # plot_no_reg_only_caps_focused()
 
 
-    # (desired_rpy, rpy, motor_outputs) = pickle.load(open("data/simulation/reg_vs_no_reg.p", "rb"))
-    # print(desired_rpy.shape, rpy.shape, motor_outputs.shape)
-    # plot_no_reg_only(desired_rpy[4500:, :], rpy[:,4500:,:], motor_outputs[:, 4500:, :], [("Without CAPS", utils.theme["blue"], '-.'),("With CAPS", utils.theme["orange"],'-')])
 
-    # print(rpy.shape)
 
-    # (all_xs, all_ys, headers) = pickle.load(open("data/simulation/progress_agents.p","rb"))
-    # plot_progresses(all_xs, all_ys, headers)
-    plt.show()
-
-    # (desired_rpy, rpy, motor_outputs) = pickle.load(open("data/simulation/pid_wil_caps.p", "rb"))
-    # motor_smoothness(motor_outputs)
 
